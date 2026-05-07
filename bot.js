@@ -14,12 +14,12 @@ const client = new Client({
 async function logAction(guild, actionType, target) {
     const logChannelId = process.env.LOG_CHANNEL_ID;
     const excludedUsers = process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : [];
-
     const logChannel = guild.channels.cache.get(logChannelId);
+    
     if (!logChannel) return;
 
     try {
-        // Wait 2 seconds to allow Discord's Audit Log to update
+        // Delay 2 seconds so the Audit Log has time to register the person who did the action
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: actionType });
@@ -28,33 +28,33 @@ async function logAction(guild, actionType, target) {
 
         const { executor } = auditEntry;
 
-        // Force fetch the member to ensure we have their latest roles/permissions
+        // CRITICAL: Force fetch the member to check their actual roles/permissions
         const member = await guild.members.fetch(executor.id).catch(() => null);
-        
         if (!member) return;
 
-        // CHECK: Does this person have ANY role with 'Administrator' enabled?
-        // This includes the owner and anyone with an Admin-level role.
+        // This checks if they have ANY role with the Administrator permission enabled
         if (!member.permissions.has('Administrator')) return;
-
-        // Skip if they are on the exclusion list
         if (excludedUsers.includes(executor.id)) return;
 
         const embed = new EmbedBuilder()
             .setTitle('🛡️ Admin Action Log')
             .setColor(0x5865F2)
             .addFields(
-                { name: 'Admin User', value: `${executor.tag} (\`${executor.id}\`)`, inline: true },
-                { name: 'Action Taken', value: `Changed ${target}`, inline: true },
+                { name: 'Admin', value: `${executor.tag}`, inline: true },
+                { name: 'Action', value: `Changed ${target}`, inline: true },
                 { name: 'Timestamp', value: moment().format('YYYY-MM-DD HH:mm:ss') }
             )
             .setTimestamp();
 
-        logChannel.send({ embeds: [embed] });
+        await logChannel.send({ embeds: [embed] });
     } catch (err) {
-        console.error("Audit log error:", err);
+        console.error("Logging Error:", err);
     }
 }
+
+    
+
+        
 
 // Listeners
 client.on(Events.GuildRoleUpdate, (oldR, newR) => logAction(newR.guild, AuditLogEvent.RoleUpdate, `Role: ${newR.name}`));
