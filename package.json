@@ -5,7 +5,6 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
-    "start": "node server.js"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
