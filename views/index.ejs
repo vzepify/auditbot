@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Bot Dashboard</title></head>
+<body>
+    <h1>Audit Log Dashboard</h1>
+    <p>Status: <strong>Online</strong></p>
+    
+    <form action="/update" method="POST">
+        <label>Logging Channel ID:</label><br>
+        <input type="text" name="channelId" value="<%= config.logChannelId %>"><br><br>
+        
+        <label>Excluded User IDs (comma separated):</label><br>
+        <textarea name="excluded" rows="4"><%= config.excludedUsers.join(', ') %></textarea><br><br>
+        
+        <button type="submit">Save Settings</button>
+    </form>
+</body>
+</html>
