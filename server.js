@@ -1,15 +1,19 @@
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const app = express();
-const port = 3000;
+
+// Railway provides the PORT automatically
+const port = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({ secret: 'dashboard-session', resave: false, saveUninitialized: true }));
-
-const CONFIG_PATH = './config.json';
+app.use(session({ 
+    secret: process.env.SESSION_SECRET || 'dashboard-session', 
+    resave: false, 
+    saveUninitialized: true 
+}));
 
 // Middleware for simple password auth
 const auth = (req, res, next) => {
@@ -18,28 +22,28 @@ const auth = (req, res, next) => {
 };
 
 app.get('/login', (req, res) => res.send('<form method="POST"><input name="pw" type="password"/><button>Login</button></form>'));
+
 app.post('/login', (req, res) => {
-    const config = JSON.parse(fs.readFileSync(CONFIG_PATH));
-    if (req.body.pw === config.adminPassword) {
+    // Uses password from Railway Variables
+    if (req.body.pw === process.env.ADMIN_PASSWORD) {
         req.session.authenticated = true;
         res.redirect('/');
     } else res.send('Wrong password');
 });
 
 app.get('/', auth, (req, res) => {
-    const config = JSON.parse(fs.readFileSync(CONFIG_PATH));
+    // Create a config-like object from Environment Variables
+    const config = {
+        logChannelId: process.env.LOG_CHANNEL_ID,
+        excludedUsers: process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : []
+    };
     res.render('index', { config });
 });
 
 app.post('/update', auth, (req, res) => {
-    let config = JSON.parse(fs.readFileSync(CONFIG_PATH));
-    config.logChannelId = req.body.channelId;
-    
-    // Convert comma-separated string to array
-    config.excludedUsers = req.body.excluded.split(',').map(id => id.trim()).filter(id => id);
-    
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-    res.redirect('/');
+    // NOTE: On Railway, you cannot programmatically update Env Vars easily.
+    // This button will now just show a reminder to update Railway settings.
+    res.send('On Railway, please update LOG_CHANNEL_ID and EXCLUDED_USERS in your Railway Dashboard Variables tab.');
 });
 
-app.listen(port, () => console.log(`Dashboard running on http://localhost:${port}`));
+app.listen(port, () => console.log(`Dashboard running on port ${port}`));
