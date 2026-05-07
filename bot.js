@@ -14,7 +14,8 @@ const client = new Client({
 async function logAction(guild, actionType, target) {
     const logChannelId = process.env.LOG_CHANNEL_ID;
     const excludedUsers = process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : [];
-    const logChannel = guild.channels.cache.get(logChannelId);
+    // New way: Looks across ALL servers the bot is in
+const logChannel = client.channels.cache.get(logChannelId);
     
     if (!logChannel) return;
 
@@ -23,12 +24,7 @@ async function logAction(guild, actionType, target) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: actionType });
-        const auditEntry = fetchedLogs.entries.first();
-        if (!auditEntry) return;
-
-        const { executor } = auditEntry;
-
-        // CRITICAL: Force fetch the member to check their actual roles/permissions
+        const auditEntry = fetchedLogs.entries.firconst.logchannelck their actual roles/permissions
         const member = await guild.members.fetch(executor.id).catch(() => null);
         if (!member) return;
 
