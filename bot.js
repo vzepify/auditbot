@@ -14,26 +14,37 @@ const client = new Client({
 async function logAction(guild, actionType, target) {
     const logChannelId = process.env.LOG_CHANNEL_ID;
     const excludedUsers = process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : [];
-    // New way: Looks across ALL servers the bot is in
-const logChannel = client.channels.cache.get(logChannelId);
+
+    // Search ALL channels the bot can see (cross-server support)
+    const logChannel = client.channels.cache.get(logChannelId);
     
-    if (!logChannel) return;
+    if (!logChannel) {
+        console.log(`Log channel ${logChannelId} not found.`);
+        return;
+    }
 
     try {
-        // Delay 2 seconds so the Audit Log has time to register the person who did the action
+        // Wait 2 seconds for Audit Log to populate
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: actionType });
-        const auditEntry = fetchedLogs.entries.firconst.logchannelck their actual roles/permissions
+        const auditEntry = fetchedLogs.entries.first();
+        
+        if (!auditEntry) return;
+
+        const { executor } = auditEntry;
+
+        // Fetch member to check permissions
         const member = await guild.members.fetch(executor.id).catch(() => null);
         if (!member) return;
 
-        // This checks if they have ANY role with the Administrator permission enabled
+        // Check if user has Administrator permission
         if (!member.permissions.has('Administrator')) return;
         if (excludedUsers.includes(executor.id)) return;
 
         const embed = new EmbedBuilder()
             .setTitle('🛡️ Admin Action Log')
+            .setDescription(`Detected in: **${guild.name}**`)
             .setColor(0x5865F2)
             .addFields(
                 { name: 'Admin', value: `${executor.tag}`, inline: true },
