@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // Required to read variables locally
 const { Client, GatewayIntentBits, EmbedBuilder, AuditLogEvent, Events } = require('discord.js');
 const moment = require('moment');
 
@@ -11,26 +11,22 @@ const client = new Client({
 });
 
 async function logAction(guild, actionType, target) {
+    // Get settings from Railway Environment Variables
     const logChannelId = process.env.LOG_CHANNEL_ID;
     const excludedUsers = process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : [];
-    
+
     const logChannel = guild.channels.cache.get(logChannelId);
     if (!logChannel) return;
 
-    // Wait a moment for audit logs to process
-    setTimeout(async () => {
-        const fetchedLogs = await guild.fetchAuditLogs({
-            limit: 1,
-            type: actionType,
-        });
-
+    try {
+        const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: actionType });
         const auditEntry = fetchedLogs.entries.first();
         if (!auditEntry) return;
 
         const { executor } = auditEntry;
-
-        // Logic: Only log if executor is Admin AND not in the exclusion list
         const member = await guild.members.fetch(executor.id);
+
+        // Security checks
         if (!member.permissions.has('Administrator')) return;
         if (excludedUsers.includes(executor.id)) return;
 
@@ -45,14 +41,16 @@ async function logAction(guild, actionType, target) {
             .setTimestamp();
 
         logChannel.send({ embeds: [embed] });
-    }, 2000); // 2 second delay ensures audit logs are populated
+    } catch (err) {
+        console.error("Audit log error:", err);
+    }
 }
 
-// Event Listeners
 client.on(Events.GuildRoleUpdate, (oldR, newR) => logAction(newR.guild, AuditLogEvent.RoleUpdate, `Role: ${newR.name}`));
 client.on(Events.ChannelUpdate, (oldC, newC) => logAction(newC.guild, AuditLogEvent.ChannelUpdate, `Channel: ${newC.name}`));
 client.on(Events.GuildMemberRemove, (member) => logAction(member.guild, AuditLogEvent.MemberKick, `Member: ${member.user.tag}`));
 
 client.once('ready', () => console.log(`Logged in as ${client.user.tag}`));
 
+// Use the token from Railway Variables
 client.login(process.env.DISCORD_TOKEN);
