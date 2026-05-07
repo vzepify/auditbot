@@ -13,18 +13,11 @@ const client = new Client({
 
 async function logAction(guild, actionType, target) {
     const logChannelId = process.env.LOG_CHANNEL_ID;
-    const excludedUsers = process.env.EXCLUDED_USERS ? process.env.EXCLUDED_USERS.split(',') : [];
-
-    // Search ALL channels the bot can see (cross-server support)
     const logChannel = client.channels.cache.get(logChannelId);
-    
-    if (!logChannel) {
-        console.log(`Log channel ${logChannelId} not found.`);
-        return;
-    }
+    if (!logChannel) return;
 
     try {
-        // Wait 2 seconds for Audit Log to populate
+        // 1. Wait a moment for the log to write
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const fetchedLogs = await guild.fetchAuditLogs({ limit: 1, type: actionType });
@@ -32,24 +25,27 @@ async function logAction(guild, actionType, target) {
         
         if (!auditEntry) return;
 
-        const { executor } = auditEntry;
+        const { executor, createdTimestamp } = auditEntry;
 
-        // Fetch member to check permissions
+        // 2. THE "RIGHT NOW" FILTER
+        // Ignore any audit log entry older than 15 seconds
+        const fifteenSecondsAgo = Date.now() - 15000;
+        if (createdTimestamp < fifteenSecondsAgo) {
+            // This was an old action from earlier today or yesterday, ignore it.
+            return; 
+        }
+
+        // 3. Admin Check (Optional: keep this if you only want Admin actions)
         const member = await guild.members.fetch(executor.id).catch(() => null);
-        if (!member) return;
-
-        // Check if user has Administrator permission
-        if (!member.permissions.has('Administrator')) return;
-        if (excludedUsers.includes(executor.id)) return;
+        if (!member || !member.permissions.has('Administrator')) return;
 
         const embed = new EmbedBuilder()
-            .setTitle('🛡️ Admin Action Log')
-            .setDescription(`Detected in: **${guild.name}**`)
-            .setColor(0x5865F2)
+            .setTitle('🛡️ Live Admin Log')
+            .setDescription(`Recent action in: **${guild.name}**`)
+            .setColor(0x00FF00) // Green for live logs
             .addFields(
-                { name: 'Admin', value: `${executor.tag}`, inline: true },
-                { name: 'Action', value: `Changed ${target}`, inline: true },
-                { name: 'Timestamp', value: moment().format('YYYY-MM-DD HH:mm:ss') }
+                { name: 'User', value: `${executor.tag}`, inline: true },
+                { name: 'Action', value: `Changed ${target}`, inline: true }
             )
             .setTimestamp();
 
