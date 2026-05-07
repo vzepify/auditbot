@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "concurrently \"node bot.js\" \"node server.js\""
   },
   "dependencies": {
-    "body-parser": "^1.20.2",
     "concurrently": "^8.2.2",
     "discord.js": "^14.14.1",
+    "express": "^4.18.3",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.9",
-    "express": "^4.18.3",
-    "express-session": "^1.18.0",
-    "moment": "^2.30.1"
+    "moment": "^2.30.1",
+    "body-parser": "^1.20.2",
+    "express-session": "^1.18.0"
   }
 }
