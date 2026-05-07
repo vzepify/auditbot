@@ -5,7 +5,7 @@
   "main": "bot.js",
   "scripts": {
   "start": "concurrently \"node bot.js\" \"node server.js\""
-}
+},
   "dependencies": {
     "body-parser": "^1.20.2",
     "discord.js": "^14.14.1",
